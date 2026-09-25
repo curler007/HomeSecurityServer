@@ -1,0 +1,10 @@
+# Door API users. Manage with manage_users.py instead of editing by hand:
+#   python manage_users.py add alice --profile total
+# profile: total (calle, portal, ambas) | parcial (calle only)
+# key_sha256 is the SHA-256 of the user's API key; the key itself is never stored.
+
+[[users]]
+name = "alice"
+profile = "total"
+active = true
+key_sha256 = "CHANGE_ME"
