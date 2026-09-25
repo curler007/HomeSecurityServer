@@ -57,6 +57,120 @@ To use this project, you will need:
 - A **server** (VPS, Raspberry Pi, or similar) capable of running Python
 - Your **Netatmo account**
 - Network access between your iPhone and the server
+- A reverse proxy with HTTPS in front of the server
+
+---
+
+## What's New in v2
+
+- **Multiple users**: every user has their own API key and a permission profile.
+- **Secrets out of the code**: credentials and device IDs live in `config.toml`, users in `users.toml` (both git-ignored).
+- **Street door + portal**: open the street door, the building portal, or both in sequence (the portal opens automatically after a configurable delay).
+- **Refresh token rotation**: if Netatmo issues a new refresh token, it is persisted to `state.json`.
+- **Access token caching**, request timeouts and a single automatic retry on expired tokens.
+- **Audit log**: every request is logged with the user name and the client IP.
+
+---
+
+## Project Structure
+
+| File | Purpose |
+|---|---|
+| `door.py` | Flask API |
+| `manage_users.py` | CLI to add, rotate, disable and remove users |
+| `config.example.toml` | Template for `config.toml` (Netatmo credentials, home and door IDs) |
+| `users.example.toml` | Example of the `users.toml` format |
+| `door.service.example` | Example systemd unit |
+| `state.json` | Created at runtime when Netatmo rotates the refresh token |
+
+---
+
+## Installation
+
+```bash
+git clone -b v2 https://github.com/curler007/HomeSecurityServer.git door
+cd door
+python3 -m venv ../venv
+../venv/bin/pip install -r requirements.txt
+
+cp config.example.toml config.toml
+chmod 600 config.toml
+# edit config.toml with your Netatmo data (see "Authentication Notes")
+
+../venv/bin/python manage_users.py add alice --profile total
+```
+
+Requires **Python 3.11+** (uses `tomllib`).
+
+Run it with gunicorn behind a reverse proxy with HTTPS (nginx, Caddy…). Use a **single worker** (`-w 1`): the delayed portal opening runs in a background thread of that worker.
+
+```bash
+../venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 door:app
+```
+
+See `door.service.example` to run it as a systemd service. By default the config files are read from the directory containing `door.py`; set `DOOR_DIR` to use another one.
+
+---
+
+## Users and Profiles
+
+| Profile | Allowed modes |
+|---|---|
+| `total` | `calle`, `portal`, `ambas` |
+| `parcial` | `calle` |
+
+```bash
+python manage_users.py list
+python manage_users.py add bob --profile parcial   # prints bob's API key once
+python manage_users.py rotate bob                   # new key, the old one stops working
+python manage_users.py profile bob total
+python manage_users.py disable bob
+python manage_users.py enable bob
+python manage_users.py remove bob
+```
+
+Only the SHA-256 hash of each key is stored in `users.toml`. Restart the service after any change.
+
+---
+
+## API
+
+`POST /abrir` with header `X-API-KEY: <your key>` and JSON body:
+
+```json
+{ "puerta": "calle" }
+```
+
+| `puerta` | Action |
+|---|---|
+| `calle` | Opens the street door |
+| `portal` | Opens the building portal |
+| `ambas` | Opens the street door, then the portal after `portal_delay_seconds` |
+
+| Status | Meaning |
+|---|---|
+| `200` | Door opened (Netatmo response in the body) |
+| `400` | Missing or invalid `puerta` |
+| `403` | Invalid API key, or the user's profile does not allow that mode |
+| `502` / `504` | Netatmo returned an error / could not be reached |
+
+```bash
+curl -X POST https://your-server/abrir \
+  -H "X-API-KEY: <your key>" -H "Content-Type: application/json" \
+  -d '{"puerta": "ambas"}'
+```
+
+In an iOS Shortcut, use **Get Contents of URL** with method `POST`, a `X-API-KEY` header and a JSON body with the `puerta` field.
+
+---
+
+## Logs
+
+When running under systemd, logs go to the journal:
+
+```bash
+journalctl -u door -f
+```
 
 ---
 
