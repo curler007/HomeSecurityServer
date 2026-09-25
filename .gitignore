@@ -1,0 +1,10 @@
+# Secrets and runtime state
+config.toml
+users.toml
+state.json
+*.tmp
+
+__pycache__/
+*.pyc
+.venv/
+venv/

@@ -1,0 +1,13 @@
+[Unit]
+Description=Netatmo Door API
+After=network.target
+
+[Service]
+User=youruser
+WorkingDirectory=/home/youruser/apps/door
+ExecStart=/home/youruser/apps/venv/bin/gunicorn -w 1 -b 127.0.0.1:5000 door:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

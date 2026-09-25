@@ -1,0 +1,22 @@
+# Door API configuration. Copy to config.toml and fill in your values.
+# NEVER commit config.toml. Recommended permissions: chmod 600 config.toml
+
+[netatmo]
+client_id     = "na_client_ios_welcome"   # client_id of the official iOS app
+client_secret = "CHANGE_ME"
+# Initial refresh token. If Netatmo rotates it, the current one is saved to state.json
+refresh_token = "CHANGE_ME"
+scope         = "security_scopes"
+home_id       = "CHANGE_ME"
+
+[opening]
+portal_delay_seconds = 16   # wait between opening "calle" and "portal" in "ambas" mode
+
+# Door keys ("calle", "portal") are the values used by the API
+[doors.calle]
+device_id = "CHANGE_ME"
+bridge_id = "CHANGE_ME"
+
+[doors.portal]
+device_id = "CHANGE_ME"
+bridge_id = "CHANGE_ME"
